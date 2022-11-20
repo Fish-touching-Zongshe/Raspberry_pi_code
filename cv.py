@@ -1,6 +1,11 @@
+import sys
+import serial
+# import open as arduino
 import face_recognition
 import cv2
 import numpy as np
+
+ser = serial.Serial("/dev/ttyACM0", 9600,timeout=1);   #open named port at 9600,1s timeot
 
 # This is a demo of running face recognition on live video from your webcam. It's a little more complicated than the
 # other example, but it includes some basic performance tweaks to make things run a lot faster:
@@ -13,6 +18,9 @@ import numpy as np
 
 # Get a reference to webcam #0 (the default one)
 video_capture = cv2.VideoCapture(0)
+
+video_capture.set(3, 480)
+video_capture.set(4, 320)
 
 # # Load a sample picture and learn how to recognize it.
 # wujin_image = face_recognition.load_image_file("wujin.png")
@@ -30,17 +38,25 @@ xie_face_encoding = face_recognition.face_encodings(xie_image)[0]
 nie_image = face_recognition.load_image_file("nie.jpg")
 nie_face_encoding = face_recognition.face_encodings(nie_image)[0]
 
+# Load zhou
+zhou_image = face_recognition.load_image_file("zhou.jpg")
+zhou_face_encoding = face_recognition.face_encodings(zhou_image)[0]
+
 # Create arrays of known face encodings and their names
 known_face_encodings = [
     xie_face_encoding,
-    nie_face_encoding
+    nie_face_encoding,
+    zhou_face_encoding,
 ]
 known_face_names = [
     "xie",
-    "nie"
+    "nie",
+    "zhou"
 ]
 able_faces = [
-    "xie"
+    "xie",
+    "nie",
+    "zhou"
 ]
 
 # Initialize some variables
@@ -91,7 +107,7 @@ while True:
 
     # Display the results
     for (top, right, bottom, left), name in zip(face_locations, face_names):
-        # Scale back up face locations since the frame we detected in was scaled to 1/4 size
+        # Scale back up face locations since the frame we detected in was scaled to 1/5 size
         top *= 4
         right *= 4
         bottom *= 4
@@ -101,10 +117,20 @@ while True:
         # in able is green, other red borders'
         if name in able_faces:
             cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+            # Open Door
+            send = 'o'  # 发送给arduino的数据
+            ser.write(send.encode())
+
         elif name in known_face_names:
             cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
+            # Not Open Door
+            send = 'n'  # 发送给arduino的数据
+            ser.write(send.encode())
         else:
             cv2.rectangle(frame, (left, top), (right, bottom), (255, 255, 255), 2)
+            # Not Open Door
+            send = 'n'  # 发送给arduino的数据
+            ser.write(send.encode())
 
         # Draw a label with a name below the face
         cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 0, 0), cv2.FILLED)
@@ -112,7 +138,13 @@ while True:
         cv2.putText(frame, name, (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1)
 
     # Display the resulting image
+    cv2.namedWindow('Video', cv2.WND_PROP_FULLSCREEN)
+    cv2.moveWindow('Video', 0,0)
+    cv2.setWindowProperty('Video', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
     cv2.imshow('Video', frame)
+
+    
+    
 
     # Hit 'q' on the keyboard to quit!
     if cv2.waitKey(1) & 0xFF == ord('q'):
